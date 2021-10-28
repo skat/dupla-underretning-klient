@@ -1,0 +1,49 @@
+openapi: 3.0.3
+info:
+  title: Underretning
+  version: 1.1.0
+  description: DUPLA underretninger
+paths: {}
+components:
+  schemas:
+    underretningResurse:
+      type: object
+      required:
+        - id
+        - type
+        - attributes
+      properties:
+        id:
+          description: 'Unik id på den enkelte underretningsresurse'
+          type: string
+        type:
+          description: 'Skal være "underretning"'
+          type: string
+        attributes:
+          $ref: '#/components/schemas/underretning'
+    underretning:
+      type: object
+      required:
+        - dataId
+        - handling
+      properties:
+        dataId:
+          description: 'Id på den oprindelige resurse underretningen vedrører'
+          type: string
+        operationer:
+          description: 'Hvis angivet, liste af OpenAPI operationer hvor underretningen er relevant'
+          type: array
+          items:
+            type: string
+        handling:
+          description: 'Typen af underretning'
+          type: string
+          enum:
+            - Berigtigelse
+            - Sletning
+            - Begrænsning
+        påvirkedeFelter:
+          description: 'Hvis relevant, liste af felter der er påvirket af underretningen'
+          type: array
+          items:
+            type: string
