@@ -7,11 +7,12 @@ import com.rabbitmq.client.impl.ExternalMechanism
 import groovy.json.JsonException
 import groovy.json.JsonOutput
 import org.apache.commons.text.StringEscapeUtils
-
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 import java.security.KeyStore
+import java.security.cert.X509Certificate
 
 @SuppressWarnings('all')
 class UnderretningTestClient {
@@ -21,7 +22,8 @@ class UnderretningTestClient {
     private static String clientCertKeystore = "client_cert_30806460.pkcs12"
     private static char[] clientCertPassphrase = "Test1234".toCharArray()
 
-    private static String trustKeystore = "skat_truststore.pkcs12"
+    // brug skat_truststore.pkcs12 internt i skat
+    private static String trustKeystore =  null // "skat_truststore.pkcs12"
     private static char[] trustPassphrase = "Test1234".toCharArray()
 
     private static String host = "underretning.dataudstilling.tfe.ocpt.ccta.dk"
@@ -31,21 +33,28 @@ class UnderretningTestClient {
     static void main(String[] args) {
         ConnectionFactory factory = new ConnectionFactory()
 
-        KeyStore ks = KeyStore.getInstance("PKCS12");
-        ks.load(new FileInputStream(clientCertKeystore), clientCertPassphrase);
+        KeyStore ks = KeyStore.getInstance("PKCS12")
+        ks.load(new FileInputStream(clientCertKeystore), clientCertPassphrase)
 
-        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-        kmf.init(ks, clientCertPassphrase);
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509")
+        kmf.init(ks, clientCertPassphrase)
 
-        KeyStore tks = KeyStore.getInstance("PKCS12");
-        tks.load(new FileInputStream(trustKeystore), trustPassphrase);
+        KeyStore tks = null
+        if (trustKeystore) {
+            tks = KeyStore.getInstance("PKCS12")
+            tks.load(new FileInputStream(trustKeystore), trustPassphrase)
+        }
 
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-        tmf.init(tks);
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509")
+        tmf.init((KeyStore) tks)
+        X509Certificate[] trustedCerts = ((X509TrustManager) tmf.getTrustManagers()[0]).getAcceptedIssuers()
 
-        SSLContext c = SSLContext.getInstance("TLSv1.3");
+        trustedCerts.each { X509Certificate cert ->
+            println "trust cert: ${cert.getSubjectDN()}"
+        }
+        SSLContext c = SSLContext.getInstance("TLSv1.3")
 
-        c.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        c.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null)
 
         factory.setHost(host)
         factory.setPort(443)
@@ -83,12 +92,12 @@ class UnderretningTestClient {
                     queue = channel.queueDeclarePassive(aftaleId)
                 } catch (IOException ex) {
                     println "kø eksisterer ikke endnu - venter øjeblik før vi kigger igen om den skulle være dukket op"
-                    Thread.sleep(30 * 60 * 60 * 1000)
+                    Thread.sleep(10 * 60 * 1000)
                 }
             }
 
             println "Queue name: ${queue.getQueue()}"
-            ObjectMapper objectMapper = new ObjectMapper();
+            ObjectMapper objectMapper = new ObjectMapper()
 
             channel.basicConsume(queue.getQueue(), false, "myConsumerTag",
                 new DefaultConsumer(channel) {

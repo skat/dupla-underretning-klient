@@ -34,7 +34,7 @@ application {
 
 swaggerSources {
     underretning {
-        inputFile = file("$rootDir/src/main/resources/underretning.yaml")
+        inputFile = file("$rootDir/src/main/resources/underretning-ekstern.yaml")
         code {
             language = 'spring'
             configFile = file("$rootDir/src/main/resources/codegen-underretning.json")
